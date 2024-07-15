@@ -120,4 +120,14 @@ def UpdateMmaForVolta : Pass<"tritongpu-update-mma-for-volta", "mlir::ModuleOp">
   let dependentDialects = ["mlir::triton::gpu::TritonGPUDialect"];
 }
 
+def TritonGPUFuncOpConvert : Pass<"tritongpu-func-convert", "mlir::ModuleOp"> {
+  let summary = "convert funcOp to LLVM Dialect";
+
+  let constructor = "mlir::createTritonGPUFuncOpConvertPass()";
+
+  let dependentDialects = ["mlir::triton::gpu::TritonGPUDialect",
+                           "mlir::LLVM::LLVMDialect",
+                           "mlir::arith::ArithmeticDialect"];
+}
+
 #endif

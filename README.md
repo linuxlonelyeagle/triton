@@ -43,13 +43,7 @@ pip install -e .
 ```
 
 # Changelog
-
-Version 2.0 is out! New features include:
-- Many, many bugfixes
-- Performance improvements
-- Backend rewritten to use MLIR
-- Support for kernels taht contain back-to-back matmuls (e.g., flash attention)
-
+- 2.0.x.exp is based on 2.0.x, which separated `triton-to-tritongpu` and `tritongpu-to-llvm` in triton,for learning purposes.
 # Contributing
 
 Community contributions are more than welcome, whether it be to fix bugs or to add new features. Feel free to open GitHub issues about your contribution ideas, and we will review them. A contributor's guide containing general guidelines is coming soon!

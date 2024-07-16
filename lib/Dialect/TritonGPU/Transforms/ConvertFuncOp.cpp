@@ -209,9 +209,9 @@ protected:
     TypeConverter::SignatureConversion result(funcOp.getNumArguments());
     auto llvmType = getTypeConverter()->convertFunctionSignature(
         funcOp.getType(), varargsAttr && varargsAttr.getValue(), result);
+    // !llvm.func<void (ptr<f32, 1>, ptr<f32, 1>, ptr<f32, 1>, i32)>
     if (!llvmType)
       return nullptr;
-
     // Propagate argument/result attributes to all converted arguments/result
     // obtained after converting a given original argument/result.
     SmallVector<NamedAttribute, 4> attributes;
@@ -268,7 +268,6 @@ protected:
     if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,
                                            &result)))
       return nullptr;
-
     return newFuncOp;
   }
 };

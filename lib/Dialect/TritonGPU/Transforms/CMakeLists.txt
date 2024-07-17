@@ -14,7 +14,9 @@ add_mlir_dialect_library(TritonGPUTransforms
   UpdateMmaForVolta.cpp
   Utility.cpp
   ConvertFuncOp.cpp
-
+  InitShareMemory.cpp
+  TypeConvert.cpp
+  
   DEPENDS
   TritonGPUTransformsIncGen
   TritonGPUCombineIncGen

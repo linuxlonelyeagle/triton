@@ -130,4 +130,13 @@ def TritonGPUFuncOpConvert : Pass<"tritongpu-func-convert", "mlir::ModuleOp"> {
                            "mlir::arith::ArithmeticDialect"];
 }
 
+def TritonGPUInitShareMemoryPass : Pass<"tritongpu-init-share-memory", "mlir::ModuleOp"> {
+  let summary = "init share memory";
+
+  let constructor = "mlir::createTritonGPUInitShareMemoryPass()";
+
+  let dependentDialects = ["mlir::triton::gpu::TritonGPUDialect",
+                           "mlir::LLVM::LLVMDialect"];
+}
+
 #endif

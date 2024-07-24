@@ -494,6 +494,6 @@ private:
 };
 } // namespace triton
 
-void Allocation::run() { triton::AllocationAnalysis(getOperation(), this); }
+void Allocation::run() { triton::AllocationAnalysis(getOperation(), this);} 
 
 } // namespace mlir

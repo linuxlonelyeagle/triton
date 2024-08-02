@@ -59,6 +59,24 @@ public:
   }
 };
 
+struct ReturnOpConversion : public ConvertOpToLLVMPattern<triton::ReturnOp> {
+  ReturnOpConversion(LLVMTypeConverter &converter, PatternBenefit benefit)
+      : ConvertOpToLLVMPattern(converter, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(triton::ReturnOp returnOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    llvm::SmallVector<mlir::Type> types;
+    auto result = getTypeConverter()->convertTypes(
+        adaptor.getOperands().getTypes(), types);
+    if (result.failed())
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(returnOp, types,
+                                                adaptor.getOperands());
+    return success();
+  }
+};
+
 struct ConvertTritonGPUFuncToLLVM
     : public triton::impl::ConvertTritonGPUFuncToLLVMBase<
           ConvertTritonGPUFuncToLLVM> {
@@ -89,6 +107,7 @@ struct ConvertTritonGPUFuncToLLVM
     RewritePatternSet funcPatterns(context);
     mlir::triton::populateFuncOpConversionPattern(
         typeConverter, funcPatterns, numWarps, patternBenefitDefault);
+    funcPatterns.add<ReturnOpConversion>(typeConverter, patternBenefitDefault);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           funcPatterns);
     if (failed(
@@ -96,6 +115,7 @@ struct ConvertTritonGPUFuncToLLVM
       return signalPassFailure();
   }
 };
+
 } // namespace
 
 namespace mlir {

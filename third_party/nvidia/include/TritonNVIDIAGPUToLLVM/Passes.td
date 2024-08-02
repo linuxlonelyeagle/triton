@@ -33,4 +33,28 @@ def ConvertTritonGPUToLLVM : Pass<"convert-triton-gpu-to-llvm", "mlir::ModuleOp"
     ];
 }
 
+def ConvertTritonGPUFuncToLLVM : Pass<"convert-triton-gpu-func-to-llvm", "mlir::ModuleOp"> {
+    let summary = "Convert TritonGPU funcOp to LLVM dialect.";
+    let description = [{
+
+    }];
+    let constructor = "mlir::triton::createConvertTritonGPUFuncToLLVMPass()";
+
+    let dependentDialects = ["mlir::arith::ArithDialect",
+                             "mlir::math::MathDialect",
+                             "mlir::gpu::GPUDialect",
+                             "mlir::scf::SCFDialect",
+                             "mlir::LLVM::LLVMDialect",
+                             "mlir::tensor::TensorDialect",
+                             "mlir::triton::TritonDialect",
+                             "mlir::triton::gpu::TritonGPUDialect",
+                             "mlir::triton::nvidia_gpu::TritonNvidiaGPUDialect",
+                             "mlir::NVVM::NVVMDialect"];
+
+    let options = [
+        Option<"computeCapability", "compute-capability",
+               "int32_t", /*default*/"80",
+               "device compute capability">,
+    ];
+}
 #endif

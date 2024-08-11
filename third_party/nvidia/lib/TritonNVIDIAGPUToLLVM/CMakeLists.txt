@@ -19,6 +19,7 @@ add_triton_library(TritonNVIDIAGPUToLLVM
     TargetInfo.cpp
     FuncOpToLLVM.cpp
     InitShareMemory.cpp
+    LoadStoreOpToLLVMPass.cpp
 
     DEPENDS
     TritonNVIDIAGPUConversionPassIncGen

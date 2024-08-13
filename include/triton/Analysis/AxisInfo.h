@@ -200,7 +200,30 @@ public:
     }
     return &(it->second);
   }
-
+  void print() {
+    auto printV = [&](SmallVector<int64_t> v, llvm::StringRef str){
+      llvm::outs() << str << ": ";
+      for (auto num : v) {
+        llvm::outs() << num << " ";
+      }
+      llvm::outs() << "\n";
+    };
+    for (auto func : getRoots()) {
+      auto *axisInfoMap = getFuncData(func);
+      if (!axisInfoMap)
+        return;
+      auto map = *axisInfoMap;
+      for (auto& it : map) {
+        llvm::outs() << it.first << "\n";
+        printV(it.second.getContiguity(), "Contiguity");
+        printV(it.second.getDivisibility(), "Divisibility");
+        printV(it.second.getConstancy(), "Constancy");
+        if (it.second.getConstantValue().has_value()) {
+          llvm::outs() << "ConstantValue: " << it.second.getConstantValue().value() << "\n";
+        }
+      }
+    }
+  }
   unsigned getPtrContiguity(Value ptr);
   unsigned getPtrAlignment(Value ptr);
   unsigned getMaskAlignment(Value mask);

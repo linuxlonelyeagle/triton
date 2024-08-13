@@ -97,7 +97,6 @@ struct ConvertTritonGPULoadStoreToLLVM
 
     ModuleAxisInfoAnalysis axisInfoAnalysis(mod);
     OpBuilder::InsertPoint indexInsertPoint;
-
     RewritePatternSet patterns(context);
     TargetInfo targetInfo(computeCapability);
     int benefit = patternBenefitPrioritizeOverLLVMConversions;

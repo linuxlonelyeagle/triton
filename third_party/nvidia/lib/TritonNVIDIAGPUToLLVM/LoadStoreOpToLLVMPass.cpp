@@ -66,7 +66,8 @@ public:
     //addIllegalDialect<triton::TritonDialect>();
     addIllegalDialect<triton::gpu::TritonGPUDialect>();
     addIllegalDialect<triton::nvidia_gpu::TritonNvidiaGPUDialect>();
-    addIllegalDialect<mlir::gpu::GPUDialect>();
+    addLegalDialect<mlir::gpu::GPUDialect>();
+    addLegalDialect<mlir::arith::ArithDialect>();
     addLegalOp<mlir::UnrealizedConversionCastOp>();
   }
 };

@@ -243,7 +243,6 @@ LinearLayout combineCtaCgaWithShape(LinearLayout ctaLayout,
   for (auto [dim, size] : llvm::zip(outDimNames, shape)) {
     labeledShape[dim] = size;
   }
-
   LinearLayout cgaLayout =
       ensureLayoutNotLargerThan(makeCgaLayout(cgaLayoutAttr), labeledShape)
           .transposeOuts(llvm::to_vector(ctaLayout.getOutDimNames()));

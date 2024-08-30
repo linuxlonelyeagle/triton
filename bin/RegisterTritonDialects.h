@@ -51,6 +51,7 @@ inline void registerTritonDialects(mlir::DialectRegistry &registry) {
   mlir::triton::registerConvertTritonGPULoadStoreToLLVMPass();
   mlir::triton::registerConvertTritonGPUMakeRangeToLLVMPass();
   mlir::triton::registerConvertTritonGPUViewOpToLLVMPass();
+  mlir::triton::registerConvertTritonGPUSPMDOpToLLVMPass();
 
   mlir::triton::registerConvertNVGPUToLLVMPass();
   mlir::triton::registerDecomposeUnsupportedNVIDIAConversions();

@@ -63,7 +63,6 @@ struct CoalescePass : public impl::TritonGPUCoalesceBase<CoalescePass> {
         }
       }
     }
-
     auto shapePerCTA = triton::gpu::getShapePerCTA(refTensorType);
     LDBG("shapePerCTA=[" << triton::join(shapePerCTA, ", ") << "]");
 

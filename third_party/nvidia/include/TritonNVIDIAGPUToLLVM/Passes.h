@@ -54,6 +54,11 @@ createConvertTritonGpuSPMDOpToLLVMPass();
 std::unique_ptr<OperationPass<ModuleOp>>
 createConvertTritonGpuSPMDOpToLLVMPass(int32_t computeCapability);
 
+std::unique_ptr<OperationPass<ModuleOp>>
+createConvertTritonGpuElementwiseOpToLLVMPass();
+std::unique_ptr<OperationPass<ModuleOp>>
+createConvertTritonGpuElementwiseOpToLLVMPass(int32_t computeCapability);
+
 #define GEN_PASS_REGISTRATION
 #include "nvidia/include/TritonNVIDIAGPUToLLVM/Passes.h.inc"
 

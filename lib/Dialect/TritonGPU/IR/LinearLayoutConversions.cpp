@@ -418,6 +418,13 @@ LinearLayout sharedToLinearLayoutLeadingOffset(ArrayRef<int64_t> shape,
   int tileRows = 8;
   int tileCols = 8 * tileWidthBytes / elemBitWidth;
 
+  if (shape[colDim] < tileCols || shape[rowDim] < tileRows) {
+    llvm::errs() << "Illegal shared layout; expected shape to be at least ["
+                 << tileRows << ", " << tileCols << "], shape: ["
+                 << shape[rowDim] << ", " << shape[colDim] << "]\n";
+    llvm::report_fatal_error("Illegal shared layout");
+  }
+
   int vec = 8 * 16 / elemBitWidth;
   if (vec != shared.getVec()) {
     llvm::errs() << "Illegal shared layout; expected `vec` to be " << vec
@@ -790,6 +797,72 @@ LinearLayout chooseShemLayoutForRegToRegConversion(
   // [offset, rep, block]
   return ret.reshapeIns(
       {{kOffset, totalOffsets}, {kIteration, totalIters}, {kBlock, 1}});
+}
+
+namespace {
+
+// TODO (Keren): Currently, we have more restrictions than necessary when using
+// stmatrix.  These restrictions are retained from legacy code, and we could
+// relax some of them in the future.
+bool canUseStMatrix(RankedTensorType tensorTy, ArrayRef<unsigned> repShape,
+                    ArrayRef<unsigned> paddedRepShape,
+                    ArrayRef<unsigned> order) {
+  auto mmaLayout =
+      mlir::dyn_cast<NvidiaMmaEncodingAttr>(tensorTy.getEncoding());
+  if (!mmaLayout || !mmaLayout.isHopper())
+    return false;
+  if (tensorTy.getElementType().getIntOrFloatBitWidth() != 16)
+    return false;
+  if (order[0] != 1)
+    return false;
+
+  auto tensorShape = tensorTy.getShape();
+  if (tensorShape.size() != 2)
+    return false;
+  auto numIterations = ceil<unsigned>(tensorShape[1], repShape[1]) *
+                       ceil<unsigned>(tensorShape[0], repShape[0]);
+  if (numIterations > 1)
+    return false;
+  if (paddedRepShape[1] % 8 != 0)
+    return false;
+  return true;
+}
+
+} // anonymous namespace
+
+std::optional<LinearLayout> chooseStMatrixLayoutForRegToRegConversion(
+    MLIRContext *ctx, RankedTensorType tensorTy, ArrayRef<unsigned> repShape,
+    ArrayRef<unsigned> paddedRepShape, ArrayRef<unsigned> order) {
+  if (!canUseStMatrix(tensorTy, repShape, paddedRepShape, order))
+    return std::nullopt;
+
+  StringAttr kReg = S("register");
+  StringAttr kLane = S("lane");
+  StringAttr kWarp = S("warp");
+  StringAttr kCol = S("dim1");
+  StringAttr kRow = S("dim0");
+
+  std::vector<std::vector<int>> basesReg = {{1, 0}, {2, 0}, {4, 0}};
+  std::vector<std::vector<int>> basesLane = {
+      {0, 1}, {0, 2}, {0, 4}, {0, 8}, {8, 0}};
+  LinearLayout layout =
+      LinearLayout({{kReg, basesReg}, {kLane, basesLane}}, {kCol, kRow});
+
+  // Expand the `register` dimension so the size of columns matches `n`.
+  auto mma = cast<NvidiaMmaEncodingAttr>(tensorTy.getEncoding());
+  int n = mma.getInstrShape()[1];
+  layout *=
+      LinearLayout::identity1D(n / layout.getOutDimSize(kCol), kReg, kCol);
+
+  // Expand the `warp` dimension according to warpsPerCTA.
+  layout *=
+      identityND(kWarp, mma.getWarpsPerCTA(), /*order=*/{0, 1}, {kRow, kCol})
+          .transposeOuts(llvm::to_vector(layout.getOutDimNames()));
+  auto ret =
+      combineCtaCgaWithShape(layout, mma.getCTALayout(), tensorTy.getShape());
+  return ret.transposeOuts(llvm::to_vector(layout.getOutDimNames()))
+      .reshapeOuts(
+          {{S("offset"), ret.getTotalOutDimSize()}, {S("iteration"), 1}});
 }
 
 } // namespace mlir::triton::gpu

@@ -290,6 +290,13 @@ static std::string getConstraintForBitwidth(unsigned bitwidth) {
   }
 }
 
+static bool isConstantTruePred(Value pred) {
+  if (auto constOp = pred.getDefiningOp<LLVM::ConstantOp>()) {
+    return cast<IntegerAttr>(constOp.getValue()).getInt() != 0;
+  }
+  return false;
+}
+
 void TargetInfo::storeDShared(RewriterBase &rewriter, Location loc, Value ptr,
                               std::optional<Value> ctaId, Value val,
                               Value pred) const {
@@ -501,16 +508,32 @@ Value TargetInfo::loadDShared(RewriterBase &rewriter, Location loc, Value ptr,
                 .v(vec, /*predicate=*/vec > 1)
                 .b(elemBitwidth);
 
-  std::string elemConstraint = "=" + getConstraintForBitwidth(elemBitwidth);
-  auto *outOpr = vec == 1 ? builder.newOperand(elemConstraint)
-                          : builder.newListOperand(vec, elemConstraint);
-  ld(outOpr, builder.newAddrOperand(ptr, "r")).predicate(pred, "b");
+  Value load;
+  if (isConstantTruePred(pred)) {
+    Type resultTy = vec == 1 ? Type(int_ty(elemBitwidth))
+                             : Type(vec_ty(int_ty(elemBitwidth), vec));
+    load = load(resultTy, ptr);
+    if (vec > 1) {
+      Type structTy = struct_ty(SmallVector<Type>(vec, int_ty(elemBitwidth)));
+      Value structValue = undef(structTy);
+      for (int i = 0; i < vec; i++) {
+        structValue = insert_val(structTy, structValue,
+                                 extract_element(load, i32_val(i)), i);
+      }
+      load = structValue;
+    }
+  } else {
+    std::string elemConstraint = "=" + getConstraintForBitwidth(elemBitwidth);
+    auto *outOpr = vec == 1 ? builder.newOperand(elemConstraint)
+                            : builder.newListOperand(vec, elemConstraint);
+    ld(outOpr, builder.newAddrOperand(ptr, "r")).predicate(pred, "b");
 
-  Type resultTy =
-      vec == 1 ? Type(int_ty(elemBitwidth))
-               : Type(struct_ty(SmallVector<Type>(vec, int_ty(elemBitwidth))));
-  Value load = builder.launch(rewriter, loc, resultTy, /*hasSideEffects=*/true);
-
+    Type resultTy =
+        vec == 1
+            ? Type(int_ty(elemBitwidth))
+            : Type(struct_ty(SmallVector<Type>(vec, int_ty(elemBitwidth))));
+    load = builder.launch(rewriter, loc, resultTy, /*hasSideEffects=*/true);
+  }
   SmallVector<Value> resultVals = unpackLLElements(loc, load, rewriter);
   return packLLVector(loc, resultVals, rewriter);
 }
@@ -580,14 +603,12 @@ bool TargetInfo::warpReduce(RewriterBase &rewriter, Location loc,
   return false;
 }
 
-bool TargetInfo::canUseStMatrix(RankedTensorType srcTy,
-                                ArrayRef<unsigned> paddedRepShape,
-                                ArrayRef<unsigned> outOrd,
-                                unsigned accumNumReplicates,
-                                int swizzleByteWidth) const {
-  return isStMatrixCompatible(srcTy, swizzleByteWidth) &&
-         accumNumReplicates == 1 && outOrd[0] == 1 &&
-         paddedRepShape[1] % 8 == 0;
+void TargetInfo::storeMatrixShared(RewriterBase &rewriter, Location loc,
+                                   Value ptr, Value val) const {
+  auto vecTy = cast<VectorType>(val.getType());
+  Type elemTy = vecTy.getElementType();
+  stMatrixm8n8x4(i32_val(0), unpackLLVector(loc, val, rewriter), 0, ptr, elemTy,
+                 loc, rewriter);
 }
 
 bool TargetInfo::processReplicaUsingStMatrix(
@@ -596,8 +617,8 @@ bool TargetInfo::processReplicaUsingStMatrix(
     ArrayRef<unsigned> paddedRepShape, ArrayRef<unsigned> origRepShape,
     ArrayRef<unsigned> outOrd, unsigned accumNumReplicates,
     int swizzleByteWidth) const {
-  if (canUseStMatrix(srcTy, paddedRepShape, outOrd, accumNumReplicates,
-                     swizzleByteWidth)) {
+  if (isStMatrixCompatible(srcTy, swizzleByteWidth) &&
+      accumNumReplicates == 1 && outOrd[0] == 1 && paddedRepShape[1] % 8 == 0) {
     storeDistributedToSharedWithStMatrix(srcTy, elemTy, vals, smemBase,
                                          paddedRepShape, origRepShape, loc,
                                          rewriter, swizzleByteWidth);

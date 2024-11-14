@@ -336,7 +336,6 @@ struct BroadcastOpConversion
     unsigned rank = srcTy.getRank();
     auto typeConverter = getTypeConverter();
     assert(rank == resultTy.getRank());
-    auto order = triton::gpu::getOrder(srcLayout);
     auto srcOffsets = emitOffsetForLayout(srcLayout, srcTy);
     auto resultOffsets = emitOffsetForLayout(resultLayout, resultTy);
     SmallVector<Value> srcVals = unpackLLElements(loc, src, rewriter);
@@ -387,7 +386,7 @@ struct MemDescSubviewOpConversion
     // Compute the offset based on the original strides of the shared memory
     // object
     auto offset = dot(rewriter, loc, opOffsetVals, smemObj.strides);
-    auto elemPtrTy = ptr_ty(rewriter.getContext(), 3);
+    auto elemPtrTy = smemObj.base.getType();
     smemObj =
         SharedMemoryObject(gep(elemPtrTy, llvmElemTy, smemObj.base, offset),
                            llvmElemTy, strides, offsetVals);

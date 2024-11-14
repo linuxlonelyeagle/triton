@@ -75,6 +75,7 @@ class BlockPointerHandle:
 class InterpreterOptions:
     extern_libs: dict = None
     debug: bool = False
+    sanitize_overflow: bool = True
     arch: str = None
     supported_fp8_dtypes: Tuple[str] = ("fp8e5", "fp8e5b16", "fp8e4nv", "fp8e4b8", "fp8e4b15")
     deprecated_fp8_dtypes: Tuple[str] = ()
@@ -418,7 +419,7 @@ class InterpreterBuilder:
     create_fadd = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.add)
     create_fmul = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.multiply)
     create_fdiv = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.divide)
-    create_frem = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.remainder)
+    create_frem = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.fmod)
     create_fsub = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.subtract)
     create_mul = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.multiply)
     create_precise_divf = lambda self, lhs, rhs: self.binary_op(lhs, rhs, np.divide)
@@ -727,7 +728,7 @@ class ReduceScanOpIneterface:
 
     def to_tensor(self, ret, dtype):
         if hasattr(ret, "shape") and ret.shape:
-            ret_type = tl.block_type(dtype, ret.shape)
+            ret_type = tl.block_type(dtype, list(ret.shape))
         else:
             ret = np.array([ret]).astype(_get_np_dtype(dtype))
             ret_type = dtype

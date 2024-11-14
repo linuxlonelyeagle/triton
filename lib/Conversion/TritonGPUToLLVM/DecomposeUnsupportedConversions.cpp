@@ -83,11 +83,17 @@ void decomposeBlockedToDotLayoutConversion(ModuleOp module) {
     OpBuilder builder(cvtOp);
     auto srcType = cast<RankedTensorType>(cvtOp.getSrc().getType());
     auto dstType = cast<RankedTensorType>(cvtOp.getType());
+    if (!cvtNeedsSharedMemory(srcType, dstType))
+      return;
     auto srcBlocked =
         dyn_cast<triton::gpu::BlockedEncodingAttr>(srcType.getEncoding());
     auto dstDotOp =
         dyn_cast<triton::gpu::DotOperandEncodingAttr>(dstType.getEncoding());
     if (srcBlocked && dstDotOp) {
+      auto dotParent = dyn_cast<NvidiaMmaEncodingAttr>(dstDotOp.getParent());
+      if (dotParent && dotParent.isAmpere()) {
+        return;
+      }
       Attribute sharedMemorySpace =
           triton::gpu::SharedMemorySpaceAttr::get(srcType.getContext());
       auto tmpType = MemDescType::get(

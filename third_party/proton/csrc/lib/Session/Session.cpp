@@ -2,8 +2,8 @@
 #include "Context/Python.h"
 #include "Context/Shadow.h"
 #include "Data/TreeData.h"
-#include "Profiler/CuptiProfiler.h"
-#include "Profiler/RoctracerProfiler.h"
+#include "Profiler/Cupti/CuptiProfiler.h"
+#include "Profiler/Roctracer/RoctracerProfiler.h"
 #include "Utility/String.h"
 
 namespace proton {
@@ -12,6 +12,9 @@ namespace {
 Profiler *getProfiler(const std::string &profilerName) {
   if (proton::toLower(profilerName) == "cupti") {
     return &CuptiProfiler::instance();
+  }
+  if (proton::toLower(profilerName) == "cupti_pcsampling") {
+    return &CuptiProfiler::instance().enablePCSampling();
   }
   if (proton::toLower(profilerName) == "roctracer") {
     return &RoctracerProfiler::instance();
@@ -37,6 +40,16 @@ makeContextSource(const std::string &contextSourceName) {
   }
   throw std::runtime_error("Unknown context source: " + contextSourceName);
 }
+
+void throwIfSessionNotInitialized(
+    const std::map<size_t, std::unique_ptr<Session>> &sessions,
+    size_t sessionId) {
+  if (!sessions.count(sessionId)) {
+    throw std::runtime_error("Session has not been initialized: " +
+                             std::to_string(sessionId));
+  }
+}
+
 } // namespace
 
 void Session::activate() {
@@ -77,19 +90,21 @@ void SessionManager::deactivateSession(size_t sessionId) {
 }
 
 void SessionManager::activateSessionImpl(size_t sessionId) {
-  if (activeSessions[sessionId])
+  throwIfSessionNotInitialized(sessions, sessionId);
+  if (sessionActive[sessionId])
     return;
-  activeSessions[sessionId] = true;
+  sessionActive[sessionId] = true;
   sessions[sessionId]->activate();
   registerInterface<ScopeInterface>(sessionId, scopeInterfaceCounts);
   registerInterface<OpInterface>(sessionId, opInterfaceCounts);
 }
 
 void SessionManager::deActivateSessionImpl(size_t sessionId) {
-  if (!activeSessions[sessionId]) {
+  throwIfSessionNotInitialized(sessions, sessionId);
+  if (!sessionActive[sessionId]) {
     return;
   }
-  activeSessions[sessionId] = false;
+  sessionActive[sessionId] = false;
   sessions[sessionId]->deactivate();
   unregisterInterface<ScopeInterface>(sessionId, scopeInterfaceCounts);
   unregisterInterface<OpInterface>(sessionId, opInterfaceCounts);
@@ -189,7 +204,7 @@ void SessionManager::addMetrics(
     size_t scopeId, const std::map<std::string, MetricValueType> &metrics,
     bool aggregable) {
   std::shared_lock<std::shared_mutex> lock(mutex);
-  for (auto [sessionId, active] : activeSessions) {
+  for (auto [sessionId, active] : sessionActive) {
     if (active) {
       sessions[sessionId]->data->addMetrics(scopeId, metrics, aggregable);
     }

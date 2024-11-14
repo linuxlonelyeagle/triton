@@ -63,7 +63,7 @@ public:
     addLegalDialect<LLVM::LLVMDialect>();
     addLegalDialect<NVVM::NVVMDialect>();
     addLegalDialect<mlir::triton::nvgpu::NVGPUDialect>();
-    //addIllegalDialect<triton::TritonDialect>();
+    // addIllegalDialect<triton::TritonDialect>();
     addIllegalDialect<triton::gpu::TritonGPUDialect>();
     addIllegalDialect<triton::nvidia_gpu::TritonNvidiaGPUDialect>();
     addLegalDialect<mlir::gpu::GPUDialect>();
@@ -73,8 +73,10 @@ public:
 };
 
 struct ConvertTritonGPULoadStoreToLLVM
-    : public triton::impl::ConvertTritonGPULoadStoreToLLVMBase<ConvertTritonGPULoadStoreToLLVM> {
-  using ConvertTritonGPULoadStoreToLLVMBase::ConvertTritonGPULoadStoreToLLVMBase;
+    : public triton::impl::ConvertTritonGPULoadStoreToLLVMBase<
+          ConvertTritonGPULoadStoreToLLVM> {
+  using ConvertTritonGPULoadStoreToLLVMBase::
+      ConvertTritonGPULoadStoreToLLVMBase;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<triton::nvgpu::NVGPUDialect, LLVM::LLVMDialect,
@@ -84,13 +86,15 @@ struct ConvertTritonGPULoadStoreToLLVM
   ConvertTritonGPULoadStoreToLLVM(int32_t computeCapability)
       : ConvertTritonGPULoadStoreToLLVMBase({computeCapability}) {}
 
+  ConvertTritonGPULoadStoreToLLVM(int32_t computeCapability, int32_t ptxVersion)
+      : ConvertTritonGPULoadStoreToLLVMBase({computeCapability, ptxVersion}) {}
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
-
+    TargetInfo targetInfo(computeCapability, ptxVersion);
     mlir::LowerToLLVMOptions option(context);
     option.overrideIndexBitwidth(32);
-    TritonGPUToLLVMTypeConverter typeConverter(context, option);
+    TritonGPUToLLVMTypeConverter typeConverter(context, option, targetInfo);
     TritonLLVMConversionTarget convTarget(*context);
     int numWarps = triton::gpu::TritonGPUDialect::getNumWarps(mod);
     int numCTAs = triton::gpu::TritonGPUDialect::getNumCTAs(mod);
@@ -99,7 +103,6 @@ struct ConvertTritonGPULoadStoreToLLVM
     ModuleAxisInfoAnalysis axisInfoAnalysis(mod);
     OpBuilder::InsertPoint indexInsertPoint;
     RewritePatternSet patterns(context);
-    TargetInfo targetInfo(computeCapability);
     int benefit = patternBenefitPrioritizeOverLLVMConversions;
     populateLoadStoreOpToLLVMPatterns(typeConverter, targetInfo, patterns,
                                       axisInfoAnalysis, benefit);
@@ -119,7 +122,8 @@ struct ConvertTritonGPULoadStoreToLLVM
 namespace mlir {
 namespace triton {
 
-std::unique_ptr<OperationPass<ModuleOp>> createConvertTritonGpuLoadStoreToLLVMPass() {
+std::unique_ptr<OperationPass<ModuleOp>>
+createConvertTritonGpuLoadStoreToLLVMPass() {
   return std::make_unique<ConvertTritonGPULoadStoreToLLVM>();
 }
 std::unique_ptr<OperationPass<ModuleOp>>

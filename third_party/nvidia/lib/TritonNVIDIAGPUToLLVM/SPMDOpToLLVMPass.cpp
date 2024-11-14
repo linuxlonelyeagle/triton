@@ -76,15 +76,17 @@ struct ConvertTritonGPUSPMDOpToLLVM
   ConvertTritonGPUSPMDOpToLLVM(int32_t computeCapability)
       : ConvertTritonGPUSPMDOpToLLVMBase({computeCapability}) {}
 
+  ConvertTritonGPUSPMDOpToLLVM(int32_t computeCapability, int32_t ptxVersion)
+      : ConvertTritonGPUSPMDOpToLLVMBase({computeCapability, ptxVersion}) {}
   void runOnOperation() override {
     auto mod = getOperation();
     MLIRContext *context = &getContext();
     mlir::LowerToLLVMOptions option(context);
     option.overrideIndexBitwidth(32);
-    TritonGPUToLLVMTypeConverter typeConverter(context, option);
+    TargetInfo targetInfo(computeCapability, ptxVersion);
+    TritonGPUToLLVMTypeConverter typeConverter(context, option, targetInfo);
     TritonLLVMConversionTarget convTarget(*context);
     RewritePatternSet patterns(context);
-    TargetInfo targetInfo(computeCapability);
     int benefit = patternBenefitPrioritizeOverLLVMConversions;
     mlir::triton::populateSPMDOpToLLVMPattern(typeConverter, patterns,
                                               targetInfo, benefit);

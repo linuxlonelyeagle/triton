@@ -86,16 +86,20 @@ struct ConvertTritonGPULoadStoreToLLVM
   ConvertTritonGPULoadStoreToLLVM(int32_t computeCapability)
       : ConvertTritonGPUMakeRangeToLLVMBase({computeCapability}) {}
 
+  ConvertTritonGPULoadStoreToLLVM(int32_t computeCapability, int32_t ptxVersion)
+      : ConvertTritonGPUMakeRangeToLLVMBase({computeCapability, ptxVersion}) {}
+
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
 
     mlir::LowerToLLVMOptions option(context);
     option.overrideIndexBitwidth(32);
-    TritonGPUToLLVMTypeConverter typeConverter(context, option);
+    TargetInfo targetInfo(computeCapability, ptxVersion);
+    TritonGPUToLLVMTypeConverter typeConverter(context, option, targetInfo);
     TritonLLVMConversionTarget convTarget(*context);
     RewritePatternSet patterns(context);
-    TargetInfo targetInfo(computeCapability);
+
     int benefit = patternBenefitPrioritizeOverLLVMConversions;
     populateMakeRangeOpToLLVMPattern(typeConverter, targetInfo, patterns,
                                      benefit);

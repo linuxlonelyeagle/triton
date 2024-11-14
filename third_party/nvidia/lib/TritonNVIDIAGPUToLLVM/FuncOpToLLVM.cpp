@@ -88,11 +88,15 @@ struct ConvertTritonGPUFuncToLLVM
   ConvertTritonGPUFuncToLLVM(int32_t computeCapability)
       : ConvertTritonGPUFuncToLLVMBase({computeCapability}) {}
 
+  ConvertTritonGPUFuncToLLVM(int32_t computeCapability, int32_t ptxVersion)
+      : ConvertTritonGPUFuncToLLVMBase({computeCapability, ptxVersion}) {}
+
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
     mlir::LowerToLLVMOptions option(context);
-    TritonGPUToLLVMTypeConverter typeConverter(context, option);
+    NVIDIA::TargetInfo targetInfo(computeCapability, ptxVersion);
+    TritonGPUToLLVMTypeConverter typeConverter(context, option, targetInfo);
     TritonLLVMConversionTarget convTarget(*context);
     int numWarps = triton::gpu::TritonGPUDialect::getNumWarps(mod);
     int numCTAs = triton::gpu::TritonGPUDialect::getNumCTAs(mod);
@@ -105,8 +109,9 @@ struct ConvertTritonGPUFuncToLLVM
     // Lower functions
     TritonLLVMFunctionConversionTarget funcTarget(*context);
     RewritePatternSet funcPatterns(context);
-    mlir::triton::populateFuncOpConversionPattern(
-        typeConverter, funcPatterns, numWarps, patternBenefitDefault);
+    mlir::triton::populateFuncOpConversionPattern(typeConverter, funcPatterns,
+                                                  numWarps, targetInfo,
+                                                  patternBenefitDefault);
     funcPatterns.add<ReturnOpConversion>(typeConverter, patternBenefitDefault);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           funcPatterns);

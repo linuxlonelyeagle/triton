@@ -49,12 +49,19 @@ struct TritonGpuInitShareMemory
                     NVVM::NVVMDialect>();
   }
 
+  TritonGpuInitShareMemory(int32_t computeCapability)
+      : ConvertTritonGPUInitShareMemoryBase({computeCapability}) {}
+
+  TritonGpuInitShareMemory(int32_t computeCapability, int32_t ptxVersion)
+      : ConvertTritonGPUInitShareMemoryBase({computeCapability, ptxVersion}) {}
+
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
     mlir::LowerToLLVMOptions option(context);
+    TargetInfo targetInfo(computeCapability, ptxVersion);
     option.overrideIndexBitwidth(32);
-    TritonGPUToLLVMTypeConverter typeConverter(context, option);
+    TritonGPUToLLVMTypeConverter typeConverter(context, option, targetInfo);
     // Allocate shared memory and set barrier
     ModuleAllocation allocation(mod);
     ModuleMembarAnalysis membarPass(&allocation);

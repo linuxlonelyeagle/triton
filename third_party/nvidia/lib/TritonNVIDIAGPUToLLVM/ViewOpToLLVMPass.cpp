@@ -45,7 +45,7 @@ public:
     addLegalDialect<LLVM::LLVMDialect>();
     addLegalDialect<NVVM::NVVMDialect>();
     addLegalDialect<mlir::triton::nvgpu::NVGPUDialect>();
-    //addIllegalDialect<triton::TritonDialect>();
+    // addIllegalDialect<triton::TritonDialect>();
     addIllegalDialect<triton::gpu::TritonGPUDialect>();
     addIllegalDialect<triton::nvidia_gpu::TritonNvidiaGPUDialect>();
     addIllegalDialect<mlir::gpu::GPUDialect>();
@@ -54,7 +54,8 @@ public:
 };
 
 struct ConvertTritonGPUViewOpToLLVM
-    : public triton::impl::ConvertTritonGPUViewOpToLLVMBase<ConvertTritonGPUViewOpToLLVM> {
+    : public triton::impl::ConvertTritonGPUViewOpToLLVMBase<
+          ConvertTritonGPUViewOpToLLVM> {
   using ConvertTritonGPUViewOpToLLVMBase::ConvertTritonGPUViewOpToLLVMBase;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<triton::nvgpu::NVGPUDialect, LLVM::LLVMDialect,
@@ -63,22 +64,23 @@ struct ConvertTritonGPUViewOpToLLVM
 
   ConvertTritonGPUViewOpToLLVM(int32_t computeCapability)
       : ConvertTritonGPUViewOpToLLVMBase({computeCapability}) {}
-
+  ConvertTritonGPUViewOpToLLVM(int32_t computeCapability, int32_t ptxVersion)
+      : ConvertTritonGPUViewOpToLLVMBase({computeCapability, ptxVersion}) {}
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     ModuleOp mod = getOperation();
-
     mlir::LowerToLLVMOptions option(context);
     option.overrideIndexBitwidth(32);
     TritonLLVMConversionTarget convTarget(*context);
-    TritonGPUToLLVMTypeConverter typeConverter(context, option);
     RewritePatternSet patterns(context);
-    TargetInfo targetInfo(computeCapability);
+    TargetInfo targetInfo(computeCapability, ptxVersion);
+    TritonGPUToLLVMTypeConverter typeConverter(context, option, targetInfo);
     int benefit = patternBenefitPrioritizeOverLLVMConversions;
     // Allocate shared memory and set barrier
     ModuleAllocation allocation(mod);
     ModuleMembarAnalysis membarPass(&allocation);
-    mlir::triton::populateViewOpToLLVMPatterns(typeConverter, patterns, benefit);
+    mlir::triton::populateViewOpToLLVMPatterns(typeConverter, patterns,
+                                               benefit);
     if (failed(applyPartialConversion(mod, convTarget, std::move(patterns))))
       return signalPassFailure();
   }

@@ -57,19 +57,24 @@ public:
 struct ConvertTritonGPUElementwiseOpToLLVM
     : public triton::impl::ConvertTritonGPUElementwiseOpToLLVMBase<
           ConvertTritonGPUElementwiseOpToLLVM> {
-using ConvertTritonGPUElementwiseOpToLLVMBase::ConvertTritonGPUElementwiseOpToLLVMBase;
+  using ConvertTritonGPUElementwiseOpToLLVMBase::
+      ConvertTritonGPUElementwiseOpToLLVMBase;
   ConvertTritonGPUElementwiseOpToLLVM(int32_t computeCapability)
       : ConvertTritonGPUElementwiseOpToLLVMBase({computeCapability}) {}
-    
-    void runOnOperation() override {
+
+  ConvertTritonGPUElementwiseOpToLLVM(int32_t computeCapability,
+                                      int32_t ptxVersion)
+      : ConvertTritonGPUElementwiseOpToLLVMBase(
+            {computeCapability, ptxVersion}) {}
+  void runOnOperation() override {
     auto mod = getOperation();
+    TargetInfo targetInfo(computeCapability, ptxVersion);
     MLIRContext *context = &getContext();
     mlir::LowerToLLVMOptions option(context);
     option.overrideIndexBitwidth(32);
-    TritonGPUToLLVMTypeConverter typeConverter(context, option);
+    TritonGPUToLLVMTypeConverter typeConverter(context, option, targetInfo);
     TritonLLVMConversionTarget convTarget(*context);
     RewritePatternSet patterns(context);
-    TargetInfo targetInfo(computeCapability);
     int benefit = patternBenefitPrioritizeOverLLVMConversions;
     ModuleAxisInfoAnalysis axisInfoAnalysis(mod);
     populateElementwiseOpToLLVMPatterns(typeConverter, patterns,
@@ -90,7 +95,8 @@ createConvertTritonGpuElementwiseOpToLLVMPass() {
 
 std::unique_ptr<OperationPass<ModuleOp>>
 createConvertTritonGpuElementwiseOpToLLVMPass(int32_t computeCapability) {
-  return std::make_unique<ConvertTritonGPUElementwiseOpToLLVM>(computeCapability);
+  return std::make_unique<ConvertTritonGPUElementwiseOpToLLVM>(
+      computeCapability);
 }
 } // namespace triton
 } // namespace mlir

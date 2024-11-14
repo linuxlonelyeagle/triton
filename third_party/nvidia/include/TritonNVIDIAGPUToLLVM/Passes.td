@@ -53,11 +53,13 @@ def ConvertTritonGPUFuncToLLVM : Pass<"convert-triton-gpu-func-to-llvm", "mlir::
                              "mlir::triton::gpu::TritonGPUDialect",
                              "mlir::triton::nvidia_gpu::TritonNvidiaGPUDialect",
                              "mlir::NVVM::NVVMDialect"];
-
     let options = [
         Option<"computeCapability", "compute-capability",
                "int32_t", /*default*/"80",
                "device compute capability">,
+        Option<"ptxVersion", "ptx-version",
+               "int32_t", /*default*/"80",
+               "PTX version">,
     ];
 }
 
@@ -78,6 +80,14 @@ def ConvertTritonGPUInitShareMemory : Pass<"triton-gpu-init-share-memory", "mlir
                              "mlir::triton::gpu::TritonGPUDialect",
                              "mlir::triton::nvidia_gpu::TritonNvidiaGPUDialect",
                              "mlir::NVVM::NVVMDialect"];
+    let options = [
+        Option<"computeCapability", "compute-capability",
+               "int32_t", /*default*/"80",
+               "device compute capability">,
+        Option<"ptxVersion", "ptx-version",
+               "int32_t", /*default*/"80",
+               "PTX version">,
+    ];
 }
 
 def ConvertTritonGPULoadStoreToLLVM : Pass<"convert-triton-gpu-load-store-to-llvm", "mlir::ModuleOp"> {
@@ -101,6 +111,9 @@ def ConvertTritonGPULoadStoreToLLVM : Pass<"convert-triton-gpu-load-store-to-llv
         Option<"computeCapability", "compute-capability",
                "int32_t", /*default*/"80",
                "device compute capability">,
+        Option<"ptxVersion", "ptx-version",
+               "int32_t", /*default*/"80",
+               "PTX version">,
     ];
 }
 
@@ -125,6 +138,9 @@ def ConvertTritonGPUMakeRangeToLLVM : Pass<"convert-triton-gpu-make-range-to-llv
         Option<"computeCapability", "compute-capability",
                "int32_t", /*default*/"80",
                "device compute capability">,
+        Option<"ptxVersion", "ptx-version",
+               "int32_t", /*default*/"80",
+               "PTX version">,
     ];
 }
 
@@ -149,6 +165,9 @@ def ConvertTritonGPUViewOpToLLVM : Pass<"convert-triton-gpu-view-op-to-llvm", "m
         Option<"computeCapability", "compute-capability",
                "int32_t", /*default*/"80",
                "device compute capability">,
+        Option<"ptxVersion", "ptx-version",
+               "int32_t", /*default*/"80",
+               "PTX version">,
     ];
 }
 
@@ -173,6 +192,9 @@ def ConvertTritonGPUSPMDOpToLLVM : Pass<"convert-triton-gpu-spmd-op-to-llvm", "m
         Option<"computeCapability", "compute-capability",
                "int32_t", /*default*/"80",
                "device compute capability">,
+        Option<"ptxVersion", "ptx-version",
+               "int32_t", /*default*/"80",
+               "PTX version">,
     ];
 }
 
@@ -197,6 +219,9 @@ def ConvertTritonGPUElementwiseOpToLLVM : Pass<"convert-triton-gpu-elementwise-o
         Option<"computeCapability", "compute-capability",
                "int32_t", /*default*/"80",
                "device compute capability">,
+        Option<"ptxVersion", "ptx-version",
+               "int32_t", /*default*/"80",
+               "PTX version">,
     ];
 }
 
